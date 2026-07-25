@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Key Manager</title>
+<style>
+  :root {
+    --bg:#0d0d10; --surf:#16161b; --surf2:#1e1e26; --surf3:#282832;
+    --border:#33333e; --text:#eeeef0; --text-s:#9898a8; --text-d:#5c5c68;
+    --accent:#7c6aff; --green:#34d374; --red:#ff4d6a; --orange:#ff8c42; --yellow:#ffc847;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; font-family:-apple-system,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg); color:var(--text); min-height:100vh;
+  }
+  .wrap { max-width:960px; margin:0 auto; padding:32px 20px 80px; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--text-s); font-size:13px; margin:0 0 28px; }
+
+  .gate { max-width:360px; margin:120px auto; text-align:center; }
+  .gate input { width:100%; margin-top:14px; }
+  .gate button { width:100%; margin-top:12px; }
+
+  .card {
+    background:var(--surf); border:1px solid var(--border); border-radius:12px;
+    padding:20px; margin-bottom:20px;
+  }
+  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-d); margin:0 0 16px; }
+
+  .row { display:flex; gap:10px; flex-wrap:wrap; }
+  .row > div { flex:1; min-width:140px; }
+
+  label.field-label { display:block; font-size:11px; color:var(--text-s); margin-bottom:6px; font-weight:600; }
+  input, select {
+    width:100%; background:var(--surf2); border:1px solid var(--border); color:var(--text);
+    padding:10px 12px; border-radius:8px; font-size:13px; outline:none;
+  }
+  input:focus, select:focus { border-color:var(--accent); }
+
+  button {
+    background:var(--accent); color:#fff; border:none; padding:11px 18px;
+    border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;
+  }
+  button.secondary { background:var(--surf3); color:var(--text-s); }
+  button.danger { background:var(--red); }
+  button.small { padding:6px 10px; font-size:11px; }
+  button:hover { filter:brightness(1.1); }
+
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th, td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--border); }
+  th { color:var(--text-d); font-weight:600; text-transform:uppercase; font-size:10.5px; }
+  code { background:var(--surf2); padding:3px 6px; border-radius:5px; font-size:12px; }
+
+  .badge { padding:3px 9px; border-radius:99px; font-size:10.5px; font-weight:700; display:inline-block; }
+  .badge.active { background:rgba(52,211,116,.15); color:var(--green); }
+  .badge.expired { background:rgba(255,77,106,.15); color:var(--red); }
+  .badge.revoked { background:rgba(255,140,66,.15); color:var(--orange); }
+  .badge.never { background:rgba(124,106,255,.15); color:var(--accent); }
+
+  .result { margin-top:14px; padding:12px 14px; background:var(--surf2); border:1px solid var(--border); border-radius:8px; font-size:13px; display:none; }
+  .toast { position:fixed; bottom:20px; right:20px; background:var(--surf2); border:1px solid var(--border); padding:12px 18px; border-radius:8px; font-size:13px; display:none; }
+  .actions-cell { display:flex; gap:6px; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate card">
+  <h1>Key Manager</h1>
+  <p class="sub">Masukkan admin secret</p>
+  <input id="secretInput" type="password" placeholder="Admin secret...">
+  <button onclick="unlock()">Masuk</button>
+</div>
+
+<div id="app" class="wrap" style="display:none">
+  <h1>Key Manager</h1>
+  <p class="sub">Generate license key untuk plugin ModelReplacer</p>
+
+  <div class="card">
+    <h2>Generate Key Baru</h2>
+    <div class="row">
+      <div>
+        <label class="field-label">Label / Nama User</label>
+        <input id="genLabel" placeholder="ex: budi_dev">
+      </div>
+      <div>
+        <label class="field-label">Durasi Aktif</label>
+        <select id="genDuration">
+          <option value="24">1 Hari</option>
+          <option value="168" selected>7 Hari</option>
+          <option value="720">30 Hari</option>
+          <option value="2160">90 Hari</option>
+          <option value="8760">1 Tahun</option>
+          <option value="0">Tidak Pernah Expired</option>
+          <option value="custom">Custom (jam)</option>
+        </select>
+      </div>
+      <div id="customDurWrap" style="display:none">
+        <label class="field-label">Custom (jam)</label>
+        <input id="genCustomHours" type="number" placeholder="ex: 48">
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <button onclick="generateKey()">⚡ Generate Key</button>
+    </div>
+    <div id="genResult" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h2>Daftar Key</h2>
+    <div class="row" style="margin-bottom:12px">
+      <input id="searchBox" placeholder="🔍 Cari label atau key..." oninput="renderTable()">
+      <button class="secondary" onclick="loadKeys()">↺ Refresh</button>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Key</th><th>Label</th><th>Status</th><th>Expired</th><th>Last Validated</th><th>Aksi</th></tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const API_BASE = ""; // same origin as this admin page, e.g. https://paestudio-api.vercel.app
+let ADMIN_SECRET = "";
+let allKeys = [];
+
+function unlock() {
+  ADMIN_SECRET = document.getElementById("secretInput").value.trim();
+  if (!ADMIN_SECRET) return;
+  sessionStorage.setItem("onium_admin_secret", ADMIN_SECRET);
+  document.getElementById("gate").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  loadKeys();
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  const saved = sessionStorage.getItem("onium_admin_secret");
+  if (saved) {
+    ADMIN_SECRET = saved;
+    document.getElementById("gate").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    loadKeys();
+  }
+  document.getElementById("genDuration").addEventListener("change", (e) => {
+    document.getElementById("customDurWrap").style.display = e.target.value === "custom" ? "block" : "none";
+  });
+});
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.style.display = "block";
+  setTimeout(() => t.style.display = "none", 2500);
+}
+
+async function apiCall(path, opts = {}) {
+  const res = await fetch(API_BASE + path, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      "x-admin-secret": ADMIN_SECRET,
+      ...(opts.headers || {}),
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Request failed");
+  return data;
+}
+
+async function generateKey() {
+  const label = document.getElementById("genLabel").value.trim();
+  const durationSel = document.getElementById("genDuration").value;
+  let durationHours = Number(durationSel);
+  if (durationSel === "custom") {
+    durationHours = Number(document.getElementById("genCustomHours").value) || 0;
+  }
+  try {
+    const data = await apiCall("/api/generate", {
+      method: "POST",
+      body: JSON.stringify({ label, durationHours }),
+    });
+    const box = document.getElementById("genResult");
+    box.style.display = "block";
+    box.innerHTML = `✓ Key dibuat: <code>${data.key}</code> ${data.expires_at ? "— expired " + new Date(data.expires_at * 1000).toLocaleString("id-ID") : "— tidak pernah expired"}`;
+    document.getElementById("genLabel").value = "";
+    loadKeys();
+  } catch (e) {
+    showToast("✗ " + e.message);
+  }
+}
+
+async function loadKeys() {
+  try {
+    const data = await apiCall("/api/keys");
+    allKeys = data.keys || [];
+    renderTable();
+  } catch (e) {
+    showToast("✗ " + e.message);
+  }
+}
+
+function statusBadge(row) {
+  const now = Math.floor(Date.now() / 1000);
+  if (row.revoked === 1) return '<span class="badge revoked">Revoked</span>';
+  if (!row.expires_at) return '<span class="badge never">Never Expires</span>';
+  if (row.expires_at < now) return '<span class="badge expired">Expired</span>';
+  return '<span class="badge active">Active</span>';
+}
+
+function renderTable() {
+  const filter = document.getElementById("searchBox").value.toLowerCase();
+  const body = document.getElementById("tableBody");
+  body.innerHTML = "";
+  const filtered = allKeys.filter(k =>
+    (k.label || "").toLowerCase().includes(filter) || k.key_code.toLowerCase().includes(filter)
+  );
+  if (filtered.length === 0) {
+    body.innerHTML = '<tr><td colspan="6" style="color:var(--text-d)">Tidak ada key.</td></tr>';
+    return;
+  }
+  for (const row of filtered) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><code>${row.key_code}</code></td>
+      <td>${row.label || "-"}</td>
+      <td>${statusBadge(row)}</td>
+      <td>${row.expires_at ? new Date(row.expires_at * 1000).toLocaleString("id-ID") : "Never"}</td>
+      <td>${row.last_validated_at ? new Date(row.last_validated_at * 1000).toLocaleString("id-ID") : "-"}</td>
+      <td class="actions-cell">
+        <button class="small secondary" onclick="extendKey('${row.key_code}')">+7 Hari</button>
+        ${row.revoked === 1
+          ? `<button class="small secondary" onclick="toggleRevoke('${row.key_code}','unrevoke')">Aktifkan</button>`
+          : `<button class="small danger" onclick="toggleRevoke('${row.key_code}','revoke')">Revoke</button>`}
+        <button class="small danger" onclick="deleteKey('${row.key_code}')">Hapus</button>
+      </td>
+    `;
+    body.appendChild(tr);
+  }
+}
+
+async function extendKey(key) {
+  const row = allKeys.find(k => k.key_code === key);
+  const base = row.expires_at && row.expires_at > Math.floor(Date.now()/1000) ? row.expires_at : Math.floor(Date.now()/1000);
+  const newExpiry = base + 7 * 24 * 3600;
+  try {
+    await apiCall("/api/update", { method: "POST", body: JSON.stringify({ key, expiresAt: newExpiry }) });
+    showToast("✓ Diperpanjang 7 hari");
+    loadKeys();
+  } catch (e) { showToast("✗ " + e.message); }
+}
+
+async function toggleRevoke(key, action) {
+  try {
+    await apiCall("/api/revoke", { method: "POST", body: JSON.stringify({ key, action }) });
+    showToast(action === "revoke" ? "✓ Key direvoke" : "✓ Key diaktifkan");
+    loadKeys();
+  } catch (e) { showToast("✗ " + e.message); }
+}
+
+async function deleteKey(key) {
+  if (!confirm("Hapus key ini permanen?")) return;
+  try {
+    await apiCall("/api/revoke", { method: "POST", body: JSON.stringify({ key, action: "delete" }) });
+    showToast("✓ Key dihapus");
+    loadKeys();
+  } catch (e) { showToast("✗ " + e.message); }
+}
+</script>
+</body>
+</html>
