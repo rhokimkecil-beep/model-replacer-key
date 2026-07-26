@@ -4,90 +4,263 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Key Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg:#0d0d10; --surf:#16161b; --surf2:#1e1e26; --surf3:#282832;
-    --border:#33333e; --text:#eeeef0; --text-s:#9898a8; --text-d:#5c5c68;
-    --accent:#7c6aff; --green:#34d374; --red:#ff4d6a; --orange:#ff8c42; --yellow:#ffc847;
+    --bg:#08090d; --bg-grid:#0d0f16;
+    --surf:#12141c; --surf2:#191c26; --surf3:#232733;
+    --border:#262b39; --border-bright:#343b4d;
+    --text:#eef0f6; --text-s:#8b90a8; --text-d:#565c72;
+    --accent:#6ee7b7; --accent-dim:#1c3d31;
+    --indigo:#8b7cff; --indigo-dim:#241f4d;
+    --blue:#5eb3ff; --green:#6ee7b7; --red:#ff6b81; --orange:#ffab5e; --yellow:#ffd166;
+    --mono: 'JetBrains Mono', 'Consolas', monospace;
+    --sans: 'Inter', -apple-system, 'Segoe UI', sans-serif;
   }
   * { box-sizing:border-box; }
   body {
-    margin:0; font-family:-apple-system,'Segoe UI',Roboto,sans-serif;
-    background:var(--bg); color:var(--text); min-height:100vh;
+    margin:0; font-family:var(--sans);
+    background:
+      radial-gradient(circle at 15% 0%, rgba(139,124,255,.06), transparent 45%),
+      radial-gradient(circle at 85% 15%, rgba(110,231,183,.05), transparent 40%),
+      var(--bg);
+    background-attachment:fixed;
+    color:var(--text); min-height:100vh;
   }
-  .wrap { max-width:960px; margin:0 auto; padding:32px 20px 80px; }
-  h1 { font-size:22px; margin:0 0 4px; }
-  .sub { color:var(--text-s); font-size:13px; margin:0 0 28px; }
+  ::selection { background:var(--indigo); color:#fff; }
 
-  .gate { max-width:360px; margin:120px auto; text-align:center; }
-  .gate input { width:100%; margin-top:14px; }
-  .gate button { width:100%; margin-top:12px; }
+  .wrap { max-width:920px; margin:0 auto; padding:28px 20px 90px; }
 
+  /* ---------- top brand bar ---------- */
+  .brandbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom:22px; margin-bottom:22px; border-bottom:1px solid var(--border);
+  }
+  .brand { display:flex; align-items:center; gap:10px; }
+  .brand-mark {
+    width:30px; height:30px; border-radius:8px;
+    background:linear-gradient(135deg, var(--indigo), var(--accent));
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-weight:700; font-size:12px; color:#0a0a0d;
+  }
+  .brand-text { font-family:var(--mono); font-size:14px; font-weight:600; letter-spacing:.02em; }
+  .brand-text .dim { color:var(--text-d); }
+  .status-pill {
+    display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:11px;
+    color:var(--text-s); background:var(--surf); border:1px solid var(--border);
+    padding:6px 12px; border-radius:99px;
+  }
+  .status-dot {
+    width:6px; height:6px; border-radius:99px; background:var(--accent);
+    box-shadow:0 0 0 0 rgba(110,231,183,.5);
+    animation:pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow:0 0 0 0 rgba(110,231,183,.45); }
+    70% { box-shadow:0 0 0 6px rgba(110,231,183,0); }
+    100% { box-shadow:0 0 0 0 rgba(110,231,183,0); }
+  }
+
+  h1 { font-size:20px; margin:0 0 4px; font-weight:700; letter-spacing:-.01em; }
+  .sub { color:var(--text-s); font-size:13px; margin:0 0 24px; }
+  .sub code { color:var(--text-s); }
+
+  /* ---------- gate screen ---------- */
+  .gate-outer {
+    min-height:88vh; display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .terminal {
+    width:100%; max-width:380px; background:var(--surf);
+    border:1px solid var(--border-bright); border-radius:12px; overflow:hidden;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.02);
+  }
+  .terminal-bar {
+    display:flex; align-items:center; gap:6px; padding:11px 14px;
+    background:var(--surf2); border-bottom:1px solid var(--border);
+  }
+  .tdot { width:9px; height:9px; border-radius:99px; }
+  .tdot.r { background:#ff5f57; } .tdot.y { background:#febc2e; } .tdot.g { background:#28c840; }
+  .terminal-title {
+    margin-left:6px; font-family:var(--mono); font-size:11px; color:var(--text-d);
+  }
+  .terminal-body { padding:30px 28px 28px; text-align:center; }
+  .gate-icon {
+    width:46px; height:46px; margin:0 auto 18px; border-radius:12px;
+    background:linear-gradient(135deg, var(--indigo-dim), var(--accent-dim));
+    border:1px solid var(--border-bright);
+    display:flex; align-items:center; justify-content:center; font-size:19px;
+  }
+  .gate-title { font-size:17px; font-weight:700; margin:0 0 4px; }
+  .gate-sub { font-size:12.5px; color:var(--text-s); margin:0 0 22px; }
+  .prompt-row {
+    display:flex; align-items:center; gap:8px; background:var(--bg);
+    border:1px solid var(--border); border-radius:8px; padding:0 4px 0 12px;
+    transition:border-color .15s;
+  }
+  .prompt-row:focus-within { border-color:var(--indigo); }
+  .prompt-caret { font-family:var(--mono); color:var(--accent); font-size:13px; }
+  .prompt-row input {
+    flex:1; background:none; border:none; outline:none; color:var(--text);
+    font-family:var(--mono); font-size:13px; padding:11px 4px;
+  }
+  .prompt-row input::placeholder { color:var(--text-d); }
+
+  .gate-error {
+    margin-top:12px; font-size:12px; color:var(--red); font-family:var(--mono);
+    display:none; text-align:left; background:rgba(255,107,129,.08);
+    border:1px solid rgba(255,107,129,.25); border-radius:7px; padding:9px 11px;
+  }
+  .gate-hint { margin-top:18px; font-size:11px; color:var(--text-d); }
+
+  /* ---------- buttons ---------- */
+  button {
+    background:var(--indigo); color:#fff; border:none; padding:11px 18px;
+    border-radius:8px; font-weight:600; font-size:13px; cursor:pointer;
+    font-family:var(--sans); transition:filter .12s, transform .12s;
+  }
+  button:active { transform:scale(.98); }
+  button.full { width:100%; margin-top:16px; }
+  button.secondary { background:var(--surf3); color:var(--text-s); }
+  button.danger { background:rgba(255,107,129,.12); color:var(--red); border:1px solid rgba(255,107,129,.25); }
+  button.small { padding:6px 11px; font-size:11px; border-radius:6px; }
+  button.ghost { background:transparent; color:var(--text-s); border:1px solid var(--border); }
+  button:hover { filter:brightness(1.12); }
+  button[disabled] { opacity:.55; cursor:not-allowed; filter:none; }
+
+  /* ---------- cards ---------- */
   .card {
     background:var(--surf); border:1px solid var(--border); border-radius:12px;
-    padding:20px; margin-bottom:20px;
+    padding:22px; margin-bottom:18px;
   }
-  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-d); margin:0 0 16px; }
+  .card-head {
+    display:flex; align-items:center; gap:8px; margin-bottom:18px;
+  }
+  .card-head .chip {
+    width:5px; height:14px; border-radius:3px; background:var(--indigo);
+  }
+  .card h2 {
+    font-size:11.5px; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--text-s); margin:0; font-weight:700; font-family:var(--mono);
+  }
 
-  .row { display:flex; gap:10px; flex-wrap:wrap; }
-  .row > div { flex:1; min-width:140px; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .row > div { flex:1; min-width:160px; }
 
-  label.field-label { display:block; font-size:11px; color:var(--text-s); margin-bottom:6px; font-weight:600; }
+  label.field-label {
+    display:block; font-size:11px; color:var(--text-s); margin-bottom:7px;
+    font-weight:600; font-family:var(--mono); letter-spacing:.01em;
+  }
   input, select {
-    width:100%; background:var(--surf2); border:1px solid var(--border); color:var(--text);
-    padding:10px 12px; border-radius:8px; font-size:13px; outline:none;
+    width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text);
+    padding:11px 13px; border-radius:8px; font-size:13px; outline:none;
+    font-family:var(--sans); transition:border-color .15s;
   }
-  input:focus, select:focus { border-color:var(--accent); }
+  input:focus, select:focus { border-color:var(--indigo); }
+  select { cursor:pointer; }
 
-  button {
-    background:var(--accent); color:#fff; border:none; padding:11px 18px;
-    border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;
+  /* ---------- table ---------- */
+  .table-toolbar { display:flex; gap:10px; margin-bottom:16px; }
+  .table-toolbar input { flex:1; }
+
+  .table-scroll { overflow-x:auto; border-radius:10px; border:1px solid var(--border); }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; min-width:640px; }
+  thead tr { background:var(--surf2); }
+  th, td { text-align:left; padding:12px 14px; border-bottom:1px solid var(--border); }
+  th {
+    color:var(--text-d); font-weight:600; text-transform:uppercase; font-size:10px;
+    letter-spacing:.06em; font-family:var(--mono);
   }
-  button.secondary { background:var(--surf3); color:var(--text-s); }
-  button.danger { background:var(--red); }
-  button.small { padding:6px 10px; font-size:11px; }
-  button:hover { filter:brightness(1.1); }
+  tbody tr { transition:background .1s; }
+  tbody tr:hover { background:rgba(255,255,255,.015); }
+  tbody tr:last-child td { border-bottom:none; }
 
-  table { width:100%; border-collapse:collapse; font-size:12.5px; }
-  th, td { text-align:left; padding:10px 8px; border-bottom:1px solid var(--border); }
-  th { color:var(--text-d); font-weight:600; text-transform:uppercase; font-size:10.5px; }
-  code { background:var(--surf2); padding:3px 6px; border-radius:5px; font-size:12px; }
+  code {
+    background:var(--bg); border:1px solid var(--border); padding:4px 8px; border-radius:6px;
+    font-size:11.5px; font-family:var(--mono); color:var(--accent); letter-spacing:.02em;
+  }
 
-  .badge { padding:3px 9px; border-radius:99px; font-size:10.5px; font-weight:700; display:inline-block; }
-  .badge.active { background:rgba(52,211,116,.15); color:var(--green); }
-  .badge.expired { background:rgba(255,77,106,.15); color:var(--red); }
-  .badge.revoked { background:rgba(255,140,66,.15); color:var(--orange); }
-  .badge.never { background:rgba(124,106,255,.15); color:var(--accent); }
+  .badge {
+    padding:4px 10px; border-radius:99px; font-size:10px; font-weight:700;
+    display:inline-flex; align-items:center; gap:5px; font-family:var(--mono);
+    text-transform:uppercase; letter-spacing:.04em;
+  }
+  .badge::before { content:''; width:5px; height:5px; border-radius:99px; }
+  .badge.active { background:rgba(110,231,183,.1); color:var(--green); }
+  .badge.active::before { background:var(--green); }
+  .badge.expired { background:rgba(255,107,129,.1); color:var(--red); }
+  .badge.expired::before { background:var(--red); }
+  .badge.revoked { background:rgba(255,171,94,.1); color:var(--orange); }
+  .badge.revoked::before { background:var(--orange); }
+  .badge.never { background:rgba(139,124,255,.1); color:var(--indigo); }
+  .badge.never::before { background:var(--indigo); }
 
-  .result { margin-top:14px; padding:12px 14px; background:var(--surf2); border:1px solid var(--border); border-radius:8px; font-size:13px; display:none; }
-  .toast { position:fixed; bottom:20px; right:20px; background:var(--surf2); border:1px solid var(--border); padding:12px 18px; border-radius:8px; font-size:13px; display:none; }
+  .empty-row { color:var(--text-d); text-align:center; padding:30px 14px !important; font-family:var(--mono); font-size:12px; }
+
+  .result {
+    margin-top:16px; padding:14px 16px; background:var(--bg);
+    border:1px solid var(--accent-dim); border-left:3px solid var(--accent);
+    border-radius:8px; font-size:13px; display:none;
+  }
+  .result code { color:var(--accent); }
+
+  .toast {
+    position:fixed; bottom:22px; right:22px; background:var(--surf2);
+    border:1px solid var(--border-bright); padding:13px 18px; border-radius:9px;
+    font-size:12.5px; display:none; font-family:var(--mono);
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+  }
   .actions-cell { display:flex; gap:6px; flex-wrap:wrap; }
-  .gate-error { margin-top:12px; font-size:12.5px; color:var(--red); display:none; }
-  .gate button[disabled] { opacity:.6; cursor:not-allowed; }
-  .topbar { display:flex; justify-content:space-between; align-items:flex-start; }
+
+  @media (max-width:640px) {
+    .brandbar { flex-wrap:wrap; gap:10px; }
+    .row > div { min-width:100%; }
+  }
 </style>
 </head>
 <body>
 
-<div id="gate" class="gate card">
-  <h1>Key Manager</h1>
-  <p class="sub">Masukkan admin secret</p>
-  <input id="secretInput" type="password" placeholder="Admin secret..." autocomplete="off">
-  <button id="unlockBtn" onclick="unlock()">Masuk</button>
-  <p id="gateError" class="gate-error"></p>
+<div id="gate" class="gate-outer">
+  <div class="terminal">
+    <div class="terminal-bar">
+      <div class="tdot r"></div><div class="tdot y"></div><div class="tdot g"></div>
+      <span class="terminal-title">key-manager — auth</span>
+    </div>
+    <div class="terminal-body">
+      <div class="gate-icon">🔐</div>
+      <p class="gate-title">Restricted Access</p>
+      <p class="gate-sub">Masukkan admin secret untuk melanjutkan</p>
+      <div class="prompt-row">
+        <span class="prompt-caret">&gt;</span>
+        <input id="secretInput" type="password" placeholder="admin secret" autocomplete="off">
+      </div>
+      <button id="unlockBtn" class="full" onclick="unlock()">Masuk</button>
+      <p id="gateError" class="gate-error"></p>
+      <p class="gate-hint">Hubungi admin project untuk akses.</p>
+    </div>
+  </div>
 </div>
 
 <div id="app" class="wrap" style="display:none">
-  <div class="topbar">
-    <div>
-      <h1>Key Manager</h1>
-      <p class="sub">Generate license key untuk plugin ModelReplacer</p>
+
+  <div class="brandbar">
+    <div class="brand">
+      <div class="brand-mark">MR</div>
+      <div class="brand-text">key-manager <span class="dim">/ model-replacer</span></div>
     </div>
-    <button class="secondary small" onclick="logout()">Keluar</button>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <div class="status-pill"><span class="status-dot"></span> online</div>
+      <button class="ghost small" onclick="logout()">Keluar</button>
+    </div>
   </div>
 
+  <h1>Key Manager</h1>
+  <p class="sub">Generate & kelola license key untuk plugin <code>ModelReplacer</code></p>
+
   <div class="card">
-    <h2>Generate Key Baru</h2>
+    <div class="card-head"><div class="chip"></div><h2>Generate Key Baru</h2></div>
     <div class="row">
       <div>
         <label class="field-label">Label / Nama User</label>
@@ -111,31 +284,31 @@
         <input id="genCustomHours" type="number" placeholder="ex: 48">
       </div>
     </div>
-    <div style="margin-top:14px">
-      <button onclick="generateKey()">⚡ Generate Key</button>
-    </div>
+    <button onclick="generateKey()">⚡ Generate Key</button>
     <div id="genResult" class="result"></div>
   </div>
 
   <div class="card">
-    <h2>Daftar Key</h2>
-    <div class="row" style="margin-bottom:12px">
+    <div class="card-head"><div class="chip"></div><h2>Daftar Key</h2></div>
+    <div class="table-toolbar">
       <input id="searchBox" placeholder="🔍 Cari label atau key..." oninput="renderTable()">
       <button class="secondary" onclick="loadKeys()">↺ Refresh</button>
     </div>
-    <table>
-      <thead>
-        <tr><th>Key</th><th>Label</th><th>Status</th><th>Expired</th><th>Last Validated</th><th>Aksi</th></tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Key</th><th>Label</th><th>Status</th><th>Expired</th><th>Last Validated</th><th>Aksi</th></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
 <div id="toast" class="toast"></div>
 
 <script>
-const API_BASE = ""; // same origin as this admin page, e.g. https://paestudio-api.vercel.app
+const API_BASE = "";
 let ADMIN_SECRET = "";
 let allKeys = [];
 
@@ -156,15 +329,10 @@ function logout() {
   sessionStorage.removeItem("onium_admin_secret");
   document.getElementById("secretInput").value = "";
   document.getElementById("app").style.display = "none";
-  document.getElementById("gate").style.display = "block";
+  document.getElementById("gate").style.display = "flex";
   showGateError("");
 }
 
-// Tries a candidate secret against a real endpoint (/api/keys) before
-// committing to it. This is what was missing before: the old code trusted
-// whatever was typed and only found out it was wrong later, deep inside
-// generateKey()/loadKeys(), showing a bare "Unauthorized" toast with no
-// way back to the gate.
 async function tryUnlock(candidate, { fromSaved } = {}) {
   const btn = document.getElementById("unlockBtn");
   if (btn) { btn.disabled = true; btn.textContent = "Memeriksa..."; }
@@ -190,7 +358,6 @@ async function tryUnlock(candidate, { fromSaved } = {}) {
       return false;
     }
 
-    // Success — candidate is a valid secret.
     ADMIN_SECRET = candidate;
     sessionStorage.setItem("onium_admin_secret", candidate);
     enterApp();
@@ -242,9 +409,6 @@ async function apiCall(path, opts = {}) {
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 401) {
-    // Secret was valid at login but no longer matches the server (e.g. it
-    // was changed on Vercel mid-session). Bounce back to the gate instead
-    // of leaving the user stuck looking at a stale table with a toast.
     logout();
     showGateError("✗ Sesi admin tidak valid lagi. Masukkan secret yang benar.");
     throw new Error("Unauthorized.");
@@ -287,7 +451,7 @@ async function loadKeys() {
 
 function statusBadge(row) {
   const now = Math.floor(Date.now() / 1000);
-  if (row.revoked === 1) return '<span class="badge revoked">Revoked</span>';
+  if (row.revoked === 1 || row.revoked === true) return '<span class="badge revoked">Revoked</span>';
   if (!row.expires_at) return '<span class="badge never">Never Expires</span>';
   if (row.expires_at < now) return '<span class="badge expired">Expired</span>';
   return '<span class="badge active">Active</span>';
@@ -301,7 +465,7 @@ function renderTable() {
     (k.label || "").toLowerCase().includes(filter) || k.key_code.toLowerCase().includes(filter)
   );
   if (filtered.length === 0) {
-    body.innerHTML = '<tr><td colspan="6" style="color:var(--text-d)">Tidak ada key.</td></tr>';
+    body.innerHTML = '<tr><td colspan="6" class="empty-row">— no keys found —</td></tr>';
     return;
   }
   for (const row of filtered) {
@@ -314,7 +478,7 @@ function renderTable() {
       <td>${row.last_validated_at ? new Date(row.last_validated_at * 1000).toLocaleString("id-ID") : "-"}</td>
       <td class="actions-cell">
         <button class="small secondary" onclick="extendKey('${row.key_code}')">+7 Hari</button>
-        ${row.revoked === 1
+        ${(row.revoked === 1 || row.revoked === true)
           ? `<button class="small secondary" onclick="toggleRevoke('${row.key_code}','unrevoke')">Aktifkan</button>`
           : `<button class="small danger" onclick="toggleRevoke('${row.key_code}','revoke')">Revoke</button>`}
         <button class="small danger" onclick="deleteKey('${row.key_code}')">Hapus</button>
