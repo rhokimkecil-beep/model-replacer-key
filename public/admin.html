@@ -62,6 +62,9 @@
   .result { margin-top:14px; padding:12px 14px; background:var(--surf2); border:1px solid var(--border); border-radius:8px; font-size:13px; display:none; }
   .toast { position:fixed; bottom:20px; right:20px; background:var(--surf2); border:1px solid var(--border); padding:12px 18px; border-radius:8px; font-size:13px; display:none; }
   .actions-cell { display:flex; gap:6px; flex-wrap:wrap; }
+  .gate-error { margin-top:12px; font-size:12.5px; color:var(--red); display:none; }
+  .gate button[disabled] { opacity:.6; cursor:not-allowed; }
+  .topbar { display:flex; justify-content:space-between; align-items:flex-start; }
 </style>
 </head>
 <body>
@@ -69,13 +72,19 @@
 <div id="gate" class="gate card">
   <h1>Key Manager</h1>
   <p class="sub">Masukkan admin secret</p>
-  <input id="secretInput" type="password" placeholder="Admin secret...">
-  <button onclick="unlock()">Masuk</button>
+  <input id="secretInput" type="password" placeholder="Admin secret..." autocomplete="off">
+  <button id="unlockBtn" onclick="unlock()">Masuk</button>
+  <p id="gateError" class="gate-error"></p>
 </div>
 
 <div id="app" class="wrap" style="display:none">
-  <h1>Key Manager</h1>
-  <p class="sub">Generate license key untuk plugin ModelReplacer</p>
+  <div class="topbar">
+    <div>
+      <h1>Key Manager</h1>
+      <p class="sub">Generate license key untuk plugin ModelReplacer</p>
+    </div>
+    <button class="secondary small" onclick="logout()">Keluar</button>
+  </div>
 
   <div class="card">
     <h2>Generate Key Baru</h2>
@@ -87,7 +96,6 @@
       <div>
         <label class="field-label">Durasi Aktif</label>
         <select id="genDuration">
-          <option value="0.0166">1 Menit (Test)</option>
           <option value="24">1 Hari</option>
           <option value="168" selected>7 Hari</option>
           <option value="720">30 Hari</option>
@@ -130,23 +138,87 @@ const API_BASE = ""; // same origin as this admin page, e.g. https://paestudio-a
 let ADMIN_SECRET = "";
 let allKeys = [];
 
-function unlock() {
-  ADMIN_SECRET = document.getElementById("secretInput").value.trim();
-  if (!ADMIN_SECRET) return;
-  sessionStorage.setItem("onium_admin_secret", ADMIN_SECRET);
+function showGateError(msg) {
+  const el = document.getElementById("gateError");
+  el.textContent = msg;
+  el.style.display = msg ? "block" : "none";
+}
+
+function enterApp() {
   document.getElementById("gate").style.display = "none";
   document.getElementById("app").style.display = "block";
   loadKeys();
 }
 
+function logout() {
+  ADMIN_SECRET = "";
+  sessionStorage.removeItem("onium_admin_secret");
+  document.getElementById("secretInput").value = "";
+  document.getElementById("app").style.display = "none";
+  document.getElementById("gate").style.display = "block";
+  showGateError("");
+}
+
+// Tries a candidate secret against a real endpoint (/api/keys) before
+// committing to it. This is what was missing before: the old code trusted
+// whatever was typed and only found out it was wrong later, deep inside
+// generateKey()/loadKeys(), showing a bare "Unauthorized" toast with no
+// way back to the gate.
+async function tryUnlock(candidate, { fromSaved } = {}) {
+  const btn = document.getElementById("unlockBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "Memeriksa..."; }
+  showGateError("");
+
+  try {
+    const res = await fetch(API_BASE + "/api/keys", {
+      headers: { "x-admin-secret": candidate },
+    });
+
+    if (res.status === 401) {
+      if (fromSaved) sessionStorage.removeItem("onium_admin_secret");
+      showGateError("✗ Admin secret salah. Cek kembali value ADMIN_SECRET di Vercel.");
+      return false;
+    }
+    if (res.status === 500) {
+      const data = await res.json().catch(() => ({}));
+      showGateError("✗ " + (data.error || "ADMIN_SECRET belum di-set di server."));
+      return false;
+    }
+    if (!res.ok) {
+      showGateError("✗ Server error (" + res.status + "). Coba lagi.");
+      return false;
+    }
+
+    // Success — candidate is a valid secret.
+    ADMIN_SECRET = candidate;
+    sessionStorage.setItem("onium_admin_secret", candidate);
+    enterApp();
+    return true;
+  } catch (e) {
+    showGateError("✗ Tidak bisa terhubung ke server: " + e.message);
+    return false;
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "Masuk"; }
+  }
+}
+
+function unlock() {
+  const candidate = document.getElementById("secretInput").value.trim();
+  if (!candidate) {
+    showGateError("Isi admin secret dulu.");
+    return;
+  }
+  tryUnlock(candidate);
+}
+
 window.addEventListener("DOMContentLoaded", () => {
   const saved = sessionStorage.getItem("onium_admin_secret");
   if (saved) {
-    ADMIN_SECRET = saved;
-    document.getElementById("gate").style.display = "none";
-    document.getElementById("app").style.display = "block";
-    loadKeys();
+    tryUnlock(saved, { fromSaved: true });
   }
+  document.getElementById("secretInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") unlock();
+  });
   document.getElementById("genDuration").addEventListener("change", (e) => {
     document.getElementById("customDurWrap").style.display = e.target.value === "custom" ? "block" : "none";
   });
@@ -168,6 +240,14 @@ async function apiCall(path, opts = {}) {
     },
   });
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401) {
+    // Secret was valid at login but no longer matches the server (e.g. it
+    // was changed on Vercel mid-session). Bounce back to the gate instead
+    // of leaving the user stuck looking at a stale table with a toast.
+    logout();
+    showGateError("✗ Sesi admin tidak valid lagi. Masukkan secret yang benar.");
+    throw new Error("Unauthorized.");
+  }
   if (!res.ok) throw new Error(data.error || "Request failed");
   return data;
 }
