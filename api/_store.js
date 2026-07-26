@@ -7,7 +7,12 @@ const BLOB_PATH = "license-keys.json";
 async function loadKeys() {
   try {
     const info = await head(BLOB_PATH);
-    const res = await fetch(info.url, { cache: "no-store" });
+    // Cache-bust the CDN edge cache — same pathname gets overwritten on
+    // every save, and Vercel Blob's edge cache doesn't invalidate instantly
+    // on cache:"no-store" alone (that only skips the local fetch cache).
+    // Appending a unique query param forces a fresh edge fetch every time.
+    const bustUrl = info.url + (info.url.includes("?") ? "&" : "?") + "t=" + Date.now();
+    const res = await fetch(bustUrl, { cache: "no-store" });
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) ? data : [];
@@ -23,6 +28,7 @@ async function saveKeys(keys) {
     addRandomSuffix: false,
     allowOverwrite: true,
     contentType: "application/json",
+    cacheControlMaxAge: 0, // don't let the CDN edge hold onto stale content
   });
 }
 
